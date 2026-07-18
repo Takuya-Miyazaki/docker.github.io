@@ -70,7 +70,7 @@ Check the [Mistral Models documentation](https://docs.mistral.ai/getting-started
 
 ## Auto-Detection
 
-When you run `docker agent run` without specifying a config, docker-agent automatically detects available providers. If `MISTRAL_API_KEY` is set and higher-priority providers (OpenAI, Anthropic, Google) are not available, Mistral will be used with `mistral-small-latest` as the default model.
+When you run `docker agent run` without specifying a config and no project-level `docker-agent.yaml`, `docker-agent.yml`, or `docker-agent.hcl` exists, docker-agent automatically detects available providers. If `MISTRAL_API_KEY` is set and higher-priority providers (OpenAI, Anthropic, Google) are not available, Mistral will be used with `mistral-small-latest` as the default model.
 
 ## Extended Thinking
 

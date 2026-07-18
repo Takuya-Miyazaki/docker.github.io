@@ -46,7 +46,7 @@ All endpoints are under the `/api` prefix.
 | `GET`    | `/api/sessions/:id`                 | Get a session by ID (messages, tokens, permissions)     |
 | `GET`    | `/api/sessions/:id/status`          | Lightweight runtime state (streaming, title, agent, tokens). Requires an attached runtime. |
 | `GET`    | `/api/sessions/:id/snapshot`        | Full state in one call (stored fields + runtime state + `last_event_seq`) for gapless resync — see [Reconnecting without gaps](#reconnecting-without-gaps). |
-| `GET`    | `/api/sessions/:id/events`          | Live session event stream (SSE) with sequence numbers and replay. Available for a run attached via [`--listen`](#listen). |
+| `GET`    | `/api/sessions/:id/events`          | Live session event stream (SSE) with sequence numbers and replay. Available for a run attached via [`--listen`](#listen), or once a session has raised at least one out-of-band event (e.g. a background job's elicitation, answered via `POST .../elicitation`), which creates a session-scoped event log on demand carrying such out-of-band events — see [Session event stream](#session-event-stream-and-reconnection) for what each kind of log contains. |
 | `DELETE` | `/api/sessions/:id`                 | Delete a session                                        |
 | `PATCH`  | `/api/sessions/:id/title`           | Update session title                                    |
 | `PATCH`  | `/api/sessions/:id/permissions`     | Update session permissions                              |
@@ -55,7 +55,7 @@ All endpoints are under the `/api` prefix.
 | `PATCH`  | `/api/sessions/:id/messages/:msg_id` | Update an existing message by ID. Returns `409 Conflict` while the session has an active run. |
 | `POST`   | `/api/sessions/:id/resume`          | Resume a paused session (after tool confirmation)       |
 | `POST`   | `/api/sessions/:id/tools/toggle`    | Toggle auto-approve (YOLO) mode                         |
-| `POST`   | `/api/sessions/:id/elicitation`     | Respond to an MCP tool elicitation request              |
+| `POST`   | `/api/sessions/:id/elicitation`     | Respond to an MCP tool elicitation request. Pass the `elicitation_id` from the `elicitation_request` event to target a specific concurrent request; omitted, it resolves the sole pending one. |
 | `POST`   | `/api/sessions/:id/steer`           | Inject messages into a running turn (pre-empts current) |
 | `POST`   | `/api/sessions/:id/followup`        | Enqueue messages to run after the current turn finishes (supports an `Idempotency-Key` — see [Idempotent follow-ups](#idempotent-follow-ups)). |
 | `GET`    | `/api/sessions/:id/models`          | List available models for the session's current agent   |
@@ -257,7 +257,16 @@ session's runtime events — `stream_started`, `agent_choice`, `tool_call`,
 per-request stream returned by the agent-execution endpoint, it is
 session-scoped and survives across turns, so a client can watch a session for
 its whole lifetime. It is available for a run attached via
-[`--listen`](#listen).
+[`--listen`](#listen), and — since a session-scoped event log is created on
+demand the first time a session raises an out-of-band event, such as an
+`elicitation_request` from a background job — for any API-created session
+that has produced at least one (see the
+[Sessions endpoint table](#sessions) above). The two kinds of log differ in
+coverage: a `--listen` run feeds its full runtime event stream into the log,
+while an on-demand log for an API-created session carries the session's
+out-of-band events — not necessarily all ordinary turn events, which flow on
+the per-request SSE stream of the [agent-execution](#agent-execution)
+request that runs the turn.
 
 Each event carries a monotonic **sequence number** in the SSE `id:` field, and
 the server buffers recent events. This makes the stream resumable:

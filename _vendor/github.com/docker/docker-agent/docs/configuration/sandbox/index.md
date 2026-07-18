@@ -34,7 +34,7 @@ docker-agent launches a sandbox VM, copies itself into it, mounts the current wo
 | Flag          | Default                                      | Description                                                                                               |
 | ------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `--sandbox`   | `false`                                      | Enable sandbox mode.                                                                                      |
-| `--template`  | `docker/sandbox-templates:docker-agent`      | OCI image used as the sandbox template. Passed to `docker sandbox create -t` / `sbx create -t`.           |
+| `--template`  | `docker/sandbox-templates:docker-agent`      | OCI image used as the sandbox template. Passed to `docker sandbox create -t` / `sbx create -t`. See [Sandbox templates](#sandbox-templates). |
 | `--sbx`       | `true`                                       | Prefer the `sbx` CLI backend when it is available. Set `--sbx=false` to always use `docker sandbox`.      |
 | `--no-kit`    | `false`                                      | Disable the [auto-kit](#auto-kit) — do not stage skills or prompt files into the sandbox.                 |
 
@@ -139,6 +139,78 @@ pointing at this command so you can turn the missing host into a
 one-line, persistent fix instead of relying on the wider conservative
 fallback host set.
 
+## Sandbox templates
+
+A sandbox template is the OCI image the sandbox VM boots from. It determines
+the base OS and the tools available inside the VM, including whether the
+`docker-agent` binary is already there. `--template` (or `-t` on `sbx
+create` / `docker sandbox create`) selects it.
+
+### The default template
+
+`--template` defaults to `docker/sandbox-templates:docker-agent`, the
+official Docker Agent sandbox template, maintained by the Docker Sandboxes
+team. See [What the default template includes](#what-the-default-template-includes)
+for details.
+
+> [!NOTE]
+> There's currently no automated process that syncs this repository's own
+> template improvements into `docker/sandbox-templates:docker-agent`. Such a
+> process may land later, but until then this image can lag behind the
+> latest Docker Agent template build.
+
+### The repo-published templates
+
+This repository's own CI also builds and publishes a sandbox template — from
+the `template` stage of the
+[`Dockerfile`](https://github.com/docker/docker-agent/blob/main/Dockerfile) —
+as `docker/docker-agent-sbx-templates`. It's the way to get the freshest
+Docker Agent–flavored template:
+
+| Tag       | Built from                    | Use it when                                                        |
+| --------- | ------------------------------ | ------------------------------------------------------------------- |
+| `:latest` | The most recent `v*` release   | You want the newest Docker Agent template with release stability. |
+| `:edge`   | The current `main` branch      | You want today's `main` build and can tolerate lower stability.   |
+
+(Each release also publishes a matching version-pinned tag, e.g.
+`docker/docker-agent-sbx-templates:1.2.3`.)
+
+Use `:latest` for normal use. Reach for `:edge` only when you specifically
+need an unreleased fix or feature and can tolerate the occasional breakage.
+For reproducible runs, pin to a digest instead of a tag, e.g.
+`docker/docker-agent-sbx-templates@sha256:...`.
+
+Select one with `--template`:
+
+```bash
+$ docker agent run --sandbox --template docker/docker-agent-sbx-templates:latest agent.yaml
+```
+
+Or point the [`sbx`](https://docs.docker.com/ai/sandboxes/) CLI at it
+directly, without going through Docker Agent:
+
+```bash
+$ sbx create -t docker/docker-agent-sbx-templates:latest
+```
+
+> [!TIP]
+> The upstream [Docker Sandboxes documentation](https://docs.docker.com/ai/sandboxes/)
+> covers the full `sbx` / `docker sandbox` CLI reference, independent of
+> Docker Agent.
+
+### What they contain
+
+The `template` stage in this repository's
+[`Dockerfile`](https://github.com/docker/docker-agent/blob/main/Dockerfile)
+layers onto `docker/sandbox-templates:shell-docker` and adds:
+
+- The `docker-agent` binary.
+- `vim` and `tmux`, for interactive debugging inside the VM.
+- The **`docker-mcp`** Docker CLI plugin, installed at `~/.docker/cli-plugins/docker-mcp`.
+
+The image carries the label `com.docker.sandboxes.flavor=docker-agent-docker`
+so sandbox tooling can identify it.
+
 ## Example
 
 ```yaml
@@ -168,9 +240,16 @@ docker agent run --sandbox agent.yaml
 
 ### What the default template includes
 
-The default template (`docker/sandbox-templates:docker-agent`) ships with:
+The default template (`docker/sandbox-templates:docker-agent`) is a
+separate image maintained by the Docker Sandboxes team. This repository
+does not control its base image or contents, so no claim is made here
+about what it ships with beyond being the image `docker agent run
+--sandbox` uses whenever `--template` is not overridden (see
+[Flags](#flags) for the exact default).
 
-- **`docker-mcp`** CLI plugin — installed at `~/.docker/cli-plugins/docker-mcp`, available out of the box so agents can invoke `docker mcp` commands inside the sandbox without any additional setup.
+For a template whose base image and contents are verified against this
+repository's own build — including the `docker-mcp` CLI plugin — see
+[the repo-published templates](#sandbox-templates).
 
 ## Auto-Kit
 

@@ -97,10 +97,10 @@ Commands support environment variable interpolation using JavaScript template li
 
 ## Default Agent
 
-Running `docker agent run` without a config file uses a built-in default agent. This is a capable general-purpose agent for quick tasks without needing any configuration.
+Running `docker agent run` without a config argument uses `docker-agent.yaml`, `docker-agent.yml`, or `docker-agent.hcl` from the current directory when present. Otherwise, it uses a capable built-in default agent for quick tasks without needing any configuration.
 
 ```bash
-# Use the default agent
+# Use the project config or built-in default agent
 $ docker agent run
 
 # Override the default with an alias

@@ -302,3 +302,9 @@ When you reference a provider:
 3. All model-level defaults (temperature, max_tokens, thinking_budget, etc.) are inherited (model settings take precedence)
 4. For OpenAI-compatible providers, the `api_type` is stored in `provider_opts.api_type`
 5. The model is used with the appropriate API client
+
+A provider with a `base_url` implies `bypass_models_gateway: true` for every
+model that references it: user-chosen endpoints are never routed through a
+configured models gateway, and such models authenticate with the provider's
+own credentials (`token_key`). See
+[Gateway Bypass](../../configuration/models/index.md#gateway-bypass).

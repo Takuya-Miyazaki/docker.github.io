@@ -47,7 +47,7 @@ models:
     title_model: string # Optional: model used for session-title generation
     compaction_model: string # Optional: model used for session-compaction (summary generation)
     compaction_threshold: float # Optional: context-window fraction that triggers auto-compaction (0–1, default: 0.9)
-    bypass_models_gateway: boolean # Optional: skip the models gateway for this model
+    bypass_models_gateway: boolean # Optional: skip the models gateway for this model (implied by a custom base_url)
 ```
 
 ## Properties Reference
@@ -73,9 +73,9 @@ models:
 | `cost`                | object     | ✗        | Explicit token pricing in USD per 1M tokens, overriding the built-in catalogue. See [Custom Token Pricing](#custom-token-pricing). |
 | `provider_opts`       | object     | ✗        | Provider-specific options (see provider pages)                                        |
 | `title_model`         | string     | ✗        | Model used for session-title generation. Can be a named model from the `models:` section or an inline `provider/model` string. When omitted, the agent's primary model generates titles. Cannot be combined with `first_available`. |
-| `compaction_model`    | string     | ✗        | Model used for session compaction (summary generation). Can be a named model or an inline `provider/model` string. When omitted, the primary model compacts. Cannot be combined with `first_available`. See [Delegating Session Compaction](#delegating-session-compaction). |
-| `compaction_threshold` | float     | ✗        | Fraction of the context window at which proactive auto-compaction triggers for agents running this model. Must be greater than `0` and at most `1`. Takes precedence over the agent-level `compaction_threshold`. Cannot be combined with `first_available`. Default: `0.9`. |
-| `bypass_models_gateway` | boolean  | ✗        | When `true`, this model connects directly to its provider even when a models gateway (`--models-gateway` / `CAGENT_MODELS_GATEWAY`) is configured. See [Gateway Bypass](#gateway-bypass). |
+| `compaction_model`    | string     | ✗        | Model used for session compaction (summary generation). Can be a named model or an inline `provider/model` string. When omitted, the primary model compacts. Cannot be combined with `first_available`. See the [Context & Compaction guide](../../guides/compaction/index.md). |
+| `compaction_threshold` | float     | ✗        | Fraction of the context window at which proactive auto-compaction triggers for agents running this model. Must be greater than `0` and at most `1`. Takes precedence over the agent-level `compaction_threshold`. Cannot be combined with `first_available`. Default: `0.9`. See the [Context & Compaction guide](../../guides/compaction/index.md). |
+| `bypass_models_gateway` | boolean  | ✗        | When `true`, this model connects directly to its provider even when a models gateway (`--models-gateway` / `CAGENT_MODELS_GATEWAY`) is configured. Implied by a custom `base_url`. See [Gateway Bypass](#gateway-bypass). |
 
 ## Attachment Capability Overrides
 
@@ -185,6 +185,11 @@ titles.
 
 ## Delegating Session Compaction
 
+> [!TIP]
+> **Full guide**
+>
+> For a task-oriented walkthrough of automatic vs. on-demand compaction, trimming tool results, and reading the context gauge, see [Managing Context & Compaction](../../guides/compaction/index.md). This section covers the `compaction_model` and `compaction_threshold` fields themselves.
+
 The `compaction_model` field lets a heavyweight primary model hand off the expensive
 compaction (summary generation) call to a smaller, faster model:
 
@@ -238,8 +243,9 @@ for complete examples.
 ## Gateway Bypass
 
 When a models gateway (`--models-gateway` / `CAGENT_MODELS_GATEWAY`) is configured,
-all models route through it by default. Set `bypass_models_gateway: true` on a
-specific model to make it connect directly to its provider instead:
+models without a custom `base_url` route through it by default. Set
+`bypass_models_gateway: true` on a specific model to make it connect directly
+to its provider instead:
 
 ```yaml
 models:

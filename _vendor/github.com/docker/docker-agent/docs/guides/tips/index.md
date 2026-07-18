@@ -375,7 +375,7 @@ settings:
   default_model: anthropic/claude-sonnet-4-5
 ```
 
-This model is used when you run `docker agent run` without a config file.
+This model is used by the built-in default agent when you run `docker agent run` without a config argument and no project-level `docker-agent.yaml`, `docker-agent.yml`, or `docker-agent.hcl` exists.
 
 ### Get Desktop Notifications with Hooks
 
